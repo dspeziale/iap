@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">User Management</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+            data-bs-target="#addUserModal">
+            <i class="fas fa-plus"></i> Add User
+        </button>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-sm">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.nome }} {{ user.cognome }}</td>
+                <td>{{ user.email }}</td>
+                <td><span class="badge bg-secondary">{{ user.ruolo }}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-danger" onclick="confirmDelete('{{ user.id }}')">Delete</button>
+                    <!-- Edit would go here -->
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST">
+                <input type="hidden" name="action" value="create">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">First Name</label>
+                        <input type="text" class="form-control" name="nome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Last Name</label>
+                        <input type="text" class="form-control" name="cognome" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <select class="form-select" name="ruolo">
+                            <option value="User">User</option>
+                            <option value="Operator">Operator</option>
+                            <option value="Supervisor">Supervisor</option>
+                            <option value="Administrator">Administrator</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Save changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Form (Hidden) -->
+<form id="deleteForm" method="POST" style="display:none;">
+    <input type="hidden" name="action" value="delete">
+    <input type="hidden" name="user_id" id="deleteUserId">
+</form>
+
+<script>
+    function confirmDelete(userId) {
+        if (confirm('Are you sure you want to delete this user?')) {
+            document.getElementById('deleteUserId').value = userId;
+            document.getElementById('deleteForm').submit();
+        }
+    }
+</script>
+{% endblock %}

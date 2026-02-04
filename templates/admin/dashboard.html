@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1 class="mt-4">Administration</h1>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card text-center mb-4">
+            <div class="card-body">
+                <i class="fas fa-users fa-3x mb-3 text-primary"></i>
+                <h5 class="card-title">User Management</h5>
+                <p class="card-text">Manage system users, roles, and passwords.</p>
+                <a href="{{ url_for('admin_bp.manage_users') }}" class="btn btn-primary">Manage Users</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center mb-4">
+            <div class="card-body">
+                <i class="fas fa-cogs fa-3x mb-3 text-secondary"></i>
+                <h5 class="card-title">Settings</h5>
+                <p class="card-text">Configure global system settings and defaults.</p>
+                <a href="{{ url_for('admin_bp.settings') }}" class="btn btn-secondary">System Settings</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center mb-4">
+            <div class="card-body">
+                <i class="fas fa-history fa-3x mb-3 text-info"></i>
+                <h5 class="card-title">Audit Logs</h5>
+                <p class="card-text">View security events and system actions.</p>
+                <a href="#" class="btn btn-info text-white">View Audit Logs</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

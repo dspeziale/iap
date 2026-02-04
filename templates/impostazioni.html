@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">System Settings</h1>
+</div>
+
+<form method="POST">
+    <div class="card mb-4">
+        <div class="card-header">General Configuration</div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Company Name</label>
+                <input type="text" class="form-control" name="COMPANY_NAME"
+                    value="{{ settings.get('COMPANY_NAME', '') }}">
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">Security</div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Subnet Whitelist (CIDR, comma separated)</label>
+                <input type="text" class="form-control" name="SUBNET_WHITELIST"
+                    value="{{ settings.get('SUBNET_WHITELIST', '') }}">
+                <div class="form-text">Example: 192.168.1.0/24, 10.0.0.0/8</div>
+            </div>
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" id="2faGlobal" name="2FA_GLOBAL" value="true" {% if
+                    settings.get('2FA_GLOBAL')=='true' %}checked{% endif %}>
+                <label class="form-check-label" for="2faGlobal">Enable Global 2FA Enforcement</label>
+                <!-- Hidden input to handle unchecked checkbox -->
+                <input type="hidden" name="2FA_GLOBAL" value="false">
+            </div>
+            <!-- Javascript to disable hidden input if checkbox is checked to avoid double submission logic issues 
+                 Or better yet, handle 'true' vs 'false' carefully in backend.
+                 For now let's rely on the fact that if checkbox is checked, 'true' is sent last and overwrites? 
+                 Actually standard HTML form sends two values if both names exist. 
+                 Better approach: Checkbox value only sent if checked.
+            -->
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save Settings</button>
+</form>
+
+<script>
+    // Fix for checkbox handling: if checked, disable the hidden false input
+    document.querySelector('form').addEventListener('submit', function (e) {
+        const checkbox = document.getElementById('2faGlobal');
+        const hidden = checkbox.nextElementSibling.nextElementSibling; // The hidden input
+        if (checkbox.checked) {
+            hidden.disabled = true;
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,145 @@
+# Impulse - Project Documentation
+
+## 1. Project Overview
+**Impulse** is a comprehensive workforce management web application designed for construction and field service companies. It handles time & attendance, fleet tracking, project management (Commesse/Cantieri), and reporting.
+
+The system is built as a **hybrid Monolith** using Python Flask, serving server-side rendered HTML (Jinja2) with a rich JavaScript frontend (DataTables, Leaflet Maps, FullCalendar). It is designed to be deployed on **Vercel** with a PostgreSQL database, but supports local SQLite for development.
+
+## 2. Technology Stack
+
+### Backend
+*   **Language**: Python 3.9+
+*   **Framework**: Flask (Modularized with Blueprints).
+*   **Database**:
+    *   **ORM**: SQLAlchemy (Flask-SQLAlchemy).
+    *   **Production**: PostgreSQL (e.g., Neon/Vercel Storage).
+    *   **Development**: SQLite (`app.db`).
+    *   **Migration**: Flask-Migrate (Alembic).
+*   **Authentication**: Session-based `Flask-Session`.
+    *   **2FA**: Time-based OTP (TOTP) using `pyotp` and `qrcode`.
+    *   **Password Hashing**: `werkzeug.security`.
+*   **Utilities**:
+    *   `traccar_client.py`: Integration with Traccar GPS API.
+    *   `psutil`: System resource monitoring.
+    *   `openpyxl`: Excel report generation.
+
+### Frontend
+*   **Template Engine**: Jinja2 (Server-side rendering).
+*   **CSS Framework**: Bootstrap (customized AdminLTE-style dashboard).
+*   **JavaScript Libraries**:
+    *   **DataTables**: Advanced tables with server-side processing.
+    *   **Leaflet.js**: Maps and Geofencing visualization.
+    *   **FullCalendar**: Visual attendance calendar.
+    *   **Instascan** / **Html5-QRCode**: In-browser QR code scanning.
+    *   **jQuery**: DOM manipulation.
+
+### Infrastructure / Deployment
+*   **Vercel**: App configured for serverless deployment (`vercel.json`, `api/index.py`).
+*   **Service Worker**: `sw.js` for basic offline capabilities (PWA).
+
+---
+
+## 3. Database Schema (`api/models.py`)
+
+The database is normalized and centers around the `Utente` (User) and `Timbratura` (Attendance) tables.
+
+| Model | Description | Key Fields | Relationships |
+| :--- | :--- | :--- | :--- |
+| **Utente** | System users. | `email`, `password_hash`, `ruolo` (Admin, Supervisor, Operator, User), `2fa_params`, `orario_inizio/fine`. | Has many `Timbratura`, `Commessa`. Self-ref `Supervisor`. |
+| **Timbratura** | Attendance records. | `tipo` (IN/OUT/ASSENZA), `timestamp`, `lat/lon`, `distanza`, `server_note`. | Linked to `Utente` and `Cantiere` OR `Commessa`. |
+| **Cantiere** | Physical worksites. | `nome`, `lat/lon`, `raggio` (geofence), `qr_code_secret`. | Has many `Timbratura`. |
+| **Commessa** | Job orders (non-geo). | `codice`, `descrizione`. | Has many `Cantieri` and `Timbratura`. |
+| **Automezzo** | Company Vehicles. | `targa`, `traccar_id`, `fuel_card`. | Linked to `Utente` (driver). |
+| **Notification**| User alerts. | `type`, `message`, `read` boolean. | Linked to `Utente`. |
+| **Setting** | Global config. | `key`, `value` (KeyValue store). | Stores 'SUBNET_WHITELIST', '2FA_GLOBAL'. |
+| **Overtime** | Extra hours log. | `hours`, `status` (PENDING/APPROVED), `reason`. | Linked to `Utente`. |
+| **AuditLog** | Security trails. | `action` (LOGIN, DELETE), `ip_address`, `details`. | Linked to `Utente`. |
+
+---
+
+## 4. Core Modules & Features
+
+The application logic is split into Blueprints within `api/routes/`.
+
+### 4.1 Authentication & Security (`api/routes/auth.py`)
+*   **Flow**: Standard Email/Password login.
+*   **2FA**:
+    *   Individual: Users can enable TOTP via QR code (`App Authenticator`).
+    *   Global Switch: Admins can force/disable 2FA globally (`2FA_ENABLED_GLOBAL` setting).
+*   **Subnet Auto-Login**:
+    *   If the user's IP matches a CIDR in `SUBNET_WHITELIST`, the system automatically logs an **IN** punch for the day.
+*   **Roles**:
+    *   `Administrator`: Full access.
+    *   `Supervisor`: Visualization of their team (subordinates).
+    *   `Operator`: Limited operational access.
+    *   `User`: Personal data only.
+
+### 4.2 Attendance System (`api/routes/scanner.py`, `attendance.py`)
+This is the heart of the application.
+1.  **Scanning**: Users scan a QR code mapped to a `Cantiere` (Site).
+2.  **Validation**:
+    *   **GPS check**: User's position must be within `Cantiere.raggio` + `accuracy`.
+    *   **Manual Override**: User can add a `note` to bypass GPS (flagged in logs).
+3.  **Smart Logic**:
+    *   **Toggle**: Auto-switches between `IN` and `OUT` based on the last record.
+    *   **Schedule Check**: Compares punch time to `Utente.working_hours`. Generates a persistent `server_note` (e.g., "⚠️ Early Exit").
+    *   **Auto-Overtime**: If `OUT` is >15min after scheduled end, an `Overtime` record is automatically created in `PENDING` state.
+
+### 4.3 Fleet Managment (`api/routes/fleet.py`, `tracker.py`)
+*   **Traccar Integration**: Connects to an external Traccar server API.
+*   **Live Map**: `tracker.html` displays vehicle positions in real-time.
+*   **History**: `tracker_history.html` allows replay of vehicle routes.
+*   **Data Sync**: `automezzi` table stores the local link (`traccar_id`) to the external GPS device.
+
+### 4.4 Projects & Tasks (`api/routes/projects.py`)
+*   **Cantieri (Sites)**: Geo-fenced locations. Require GPS validation.
+*   **Commesse (Orders)**: Logical billing codes. DO NOT require GPS validation (used for office/remote work).
+*   **Dashboard**: Shows "Active Workers" per site.
+
+### 4.5 Administration (`api/routes/admin.py`, `settings.py`)
+*   **User Management**: CRUD for users, password resets, role assignment.
+*   **Audit**: View `audit_logs` table for security events.
+*   **Settings**: A dynamic key-value interface (`impostazioni.html`) for configuring:
+    *   Company details.
+    *   Subnet IP Whitelists.
+    *   Global 2FA policies.
+
+### 4.6 Reporting (`api/routes/quadrature.py`)
+*   **DataTables**: Server-side processing implemented for high-volume logs.
+*   **Analysis**: Compares `Timbratura` vs `Overtime` records.
+*   **Export**: Generates `.xlsx` reports using `openpyxl`.
+
+---
+
+## 5. Application Structure
+
+```text
+/
+├── api/
+│   ├── index.py           # Application Entry Point (Vercel handler)
+│   ├── extensions.py      # SQLAlchemy & Libraries init
+│   ├── models.py          # Database Schema Definition
+│   ├── utils.py           # Helpers (Role decorators, Haversine, Email)
+│   ├── traccar_client.py  # GPS API Client
+│   └── routes/            # Feature Modules
+│       ├── auth.py        # Login logic
+│       ├── scanner.py     # QR Attendance logic
+│       ├── admin.py       # User CRUD
+│       ├── ...
+├── templates/             # Jinja2 HTML files
+│   ├── base.html          # Main Layout (Sidebar/Header)
+│   ├── index.html         # Dashboard
+│   ├── scanner.html       # QR Scanner
+│   ├── impostazioni.html  # Settings
+│   └── ...
+├── static/                # JS, CSS, Images
+├── requirements.txt       # Python dependencies
+└── vercel.json           # Deployment config
+```
+
+## 6. Critical Implementation Details for Coding Agents
+1.  **Vercel Constraints**: The app uses `NullPool` for SQLAlchemy when detecting PostgreSQL to avoid connection limit errors in serverless environments (`api/index.py`). Background threads are avoided; logic is event-driven or relied on cron (outside scope).
+2.  **Date Handling**: Most timestamps are stored as naive UTC in DB. The frontend expects ISO 8601 strings.
+3.  **Role Logic**: Always use `@role_required([...])` decorator from `api.utils` for new routes.
+4.  **Geolocation**: The Haversine distance calculation in `scanner.py` is the gatekeeper for attendance.
+5.  **Notifications**: Are stored in the DB (`notifications` table) and polled by the frontend, not pushed via WebSockets.
