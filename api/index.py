@@ -1,6 +1,6 @@
 import os
 from flask import Flask, render_template
-from .extensions import db, migrate, sess
+from .extensions import db, migrate
 from .models import Utente # Import models so Alembic can detect them
 
 # Import Blueprints
@@ -27,8 +27,8 @@ def create_app(test_config=None):
         SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
         SQLALCHEMY_DATABASE_URI=db_url or 'sqlite:///app.db',
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
-        SESSION_TYPE='filesystem',
-        SESSION_PERMANENT=False,
+        # SESSION_TYPE='filesystem', # Disabled for Vercel/Serverless
+        # SESSION_PERMANENT=False,
         SQLALCHEMY_ENGINE_OPTIONS={
             "poolclass": NullPool
         }
@@ -44,7 +44,7 @@ def create_app(test_config=None):
     # Initialize Extensions
     db.init_app(app)
     migrate.init_app(app, db)
-    sess.init_app(app)
+    # sess.init_app(app) # Disabled for Vercel/Serverless (Use Client-side cookies)
 
     # Register Blueprints
     app.register_blueprint(auth_bp)
