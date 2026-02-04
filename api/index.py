@@ -10,6 +10,7 @@ from .routes.admin import admin_bp
 from .routes.fleet import fleet_bp
 from .routes.projects import projects_bp
 from .routes.quadrature import quadrature_bp
+from sqlalchemy.pool import NullPool
 
 def create_app(test_config=None):
     # create and configure the app
@@ -17,12 +18,20 @@ def create_app(test_config=None):
                 template_folder='../templates',
                 static_folder='../static')
     
+    # Vercel/Neon Config
+    db_url = os.environ.get('DATABASE_URL')
+    if db_url and db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
+    
     app.config.from_mapping(
-        SECRET_KEY='dev',
-        SQLALCHEMY_DATABASE_URI=os.environ.get('DATABASE_URL') or 'sqlite:///app.db',
+        SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
+        SQLALCHEMY_DATABASE_URI=db_url or 'sqlite:///app.db',
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         SESSION_TYPE='filesystem',
-        SESSION_PERMANENT=False
+        SESSION_PERMANENT=False,
+        SQLALCHEMY_ENGINE_OPTIONS={
+            "poolclass": NullPool
+        }
     )
 
     if test_config is None:
