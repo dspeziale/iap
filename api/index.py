@@ -54,6 +54,23 @@ def create_app(test_config=None):
     app.register_blueprint(projects_bp)
     app.register_blueprint(quadrature_bp)
 
+    # Global Auth Check
+    from flask import session, request, redirect, url_for
+
+    @app.before_request
+    def require_login():
+        # Allow static files
+        if request.endpoint == 'static':
+            return
+            
+        # Allow auth routes (login, logout)
+        if request.endpoint and 'auth_bp' in request.endpoint:
+            return
+            
+        # Require login for everything else
+        if 'user_id' not in session:
+            return redirect(url_for('auth_bp.login'))
+
     @app.route('/')
     def index():
         return render_template('index.html')
@@ -61,26 +78,6 @@ def create_app(test_config=None):
     # Ensure database tables are created (for dev/sqlite)
     with app.app_context():
         db.create_all()
-
-    @app.route('/setup_admin')
-    def setup_admin():
-        with app.app_context():
-            db.create_all() # Ensure tables on prod
-            email = "admin@iap.com"
-            if Utente.query.filter_by(email=email).first():
-                return f"User {email} already exists."
-            
-            from werkzeug.security import generate_password_hash
-            admin = Utente(
-                email=email,
-                password_hash=generate_password_hash('admin'),
-                nome='Admin',
-                cognome='Global',
-                ruolo='Administrator'
-            )
-            db.session.add(admin)
-            db.session.commit()
-            return f"Created admin user: {email} / admin"
 
     return app
 

@@ -36,6 +36,26 @@
             {% endif %}
             {% endwith %}
 
+            {% if first_run %}
+            <div class="alert alert-warning">
+                <strong>System Setup needed!</strong><br>
+                No users found. Create the Administrator account.
+            </div>
+            <input type="hidden" name="action" value="setup">
+
+            <div class="form-floating mb-3">
+                <input type="text" class="form-control" value="admin@iap.com" disabled readonly>
+                <label>Admin Email</label>
+            </div>
+            <div class="form-floating mb-3">
+                <input type="password" name="admin_password" class="form-control" placeholder="Create Admin Password"
+                    required>
+                <label>Create Admin Password</label>
+            </div>
+            <button class="w-100 btn btn-lg btn-danger" type="submit">Create Admin</button>
+
+            {% else %}
+
             <div class="form-floating mb-3">
                 <input type="email" name="email" class="form-control" id="floatingInput" placeholder="name@example.com"
                     required>
@@ -48,6 +68,8 @@
             </div>
 
             <button class="w-100 btn btn-lg btn-primary" type="submit">Sign in</button>
+            {% endif %}
+
             <p class="mt-5 mb-3 text-muted">© 2024 Impulse</p>
         </form>
     </main>
