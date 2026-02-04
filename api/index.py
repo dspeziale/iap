@@ -62,6 +62,26 @@ def create_app(test_config=None):
     with app.app_context():
         db.create_all()
 
+    @app.route('/setup_admin')
+    def setup_admin():
+        with app.app_context():
+            db.create_all() # Ensure tables on prod
+            email = "admin@iap.com"
+            if Utente.query.filter_by(email=email).first():
+                return f"User {email} already exists."
+            
+            from werkzeug.security import generate_password_hash
+            admin = Utente(
+                email=email,
+                password_hash=generate_password_hash('admin'),
+                nome='Admin',
+                cognome='Global',
+                ruolo='Administrator'
+            )
+            db.session.add(admin)
+            db.session.commit()
+            return f"Created admin user: {email} / admin"
+
     return app
 
 # For Vercel
