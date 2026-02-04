@@ -50,7 +50,7 @@ def scan_endpoint():
     ).order_by(Timbratura.timestamp.desc()).first()
     
     tipo = 'IN'
-    if last_punch andBN last_punch.tipo == 'IN':
+    if last_punch and last_punch.tipo == 'IN':
         tipo = 'OUT'
         
     # 4. Create Record
