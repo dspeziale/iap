@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Fleet Management</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addVehicleModal">
+            <i class="fas fa-plus"></i> Add Vehicle
+        </button>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="list-group mb-4">
+            {% for v in vehicles %}
+            <a href="#"
+                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-0">{{ v.targa }}</h6>
+                    <small class="text-muted">{{ v.modello }}</small>
+                </div>
+                <span class="badge bg-secondary rounded-pill">ID: {{ v.traccar_id }}</span>
+            </a>
+            {% else %}
+            <div class="list-group-item">No vehicles registered.</div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header">Live Map (Traccar Simulation)</div>
+            <div class="card-body bg-light" style="min-height: 400px; position: relative;">
+                <!-- Leaflet Map Container -->
+                <div id="map" style="height: 100%; width: 100%;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Vehicle Modal -->
+<div class="modal fade" id="addVehicleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="{{ url_for('fleet_bp.create_vehicle') }}" method="POST">
+                <div class="modal-header">
+                    <h5 class="modal-title">New Vehicle</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">License Plate (Targa)</label>
+                        <input type="text" class="form-control" name="targa" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Model</label>
+                        <input type="text" class="form-control" name="modello">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Traccar Device ID</label>
+                        <input type="number" class="form-control" name="traccar_id">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet CSS/JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    var map = L.map('map').setView([41.9028, 12.4964], 6); // Default Rome
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Mock Positions from Server
+    var positions = {{ positions | tojson }};
+
+    positions.forEach(function (pos) {
+        L.marker([pos.latitude, pos.longitude])
+            .addTo(map)
+            .bindPopup(`Device: ${pos.deviceId}<br>Speed: ${pos.speed} km/h<br>${pos.address}`);
+    });
+</script>
+{% endblock %}
